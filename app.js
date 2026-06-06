@@ -289,7 +289,7 @@ function addStationMarker(station) {
   metarCluster.addLayer(marker);
 }
 
-// ---------------- DATA LOADER ----------------
+// ---------------- NATIONWIDE LOAD ----------------
 async function loadNationwideMetar() {
   try {
     setStatus("Loading nationwide METAR…");
@@ -354,10 +354,11 @@ function escapeJs(str) {
   return String(str).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
-// expose popup-button functions
+// expose functions to popup buttons
 window.saveFavorite = saveFavorite;
 window.removeFavorite = removeFavorite;
 window.zoomTo = zoomTo;
 window.setRouteStart = setRouteStart;
 window.setRouteEnd = setRouteEnd;
 window.clearRoute = clearRoute;
+``
