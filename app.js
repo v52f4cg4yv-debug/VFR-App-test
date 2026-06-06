@@ -1,7 +1,4 @@
-const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
-const AUTO_REFRESH_MS = 300000; // 5 minutes
-
-let map;
+const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";const WORKER_URL = "https map;
 let metarCluster;
 let favoriteLayer;
 let routeLayer = null;
@@ -147,8 +144,8 @@ function updateFavorites() {
     favList.innerHTML = "No favorites yet.";
   } else {
     favList.innerHTML = favs.map(f => `
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.id)}</span>
+      <div class="fav-row">
+        <span>${escapeHtml(f.id)}</span>
         <button onclick="zoomTo(${f.lat}, ${f.lon})">📍</button>
         <button onclick="setRouteStart('${escapeJs(f.id)}', ${f.lat}, ${f.lon})">A</button>
         <button onclick="setRouteEnd('${escapeJs(f.id)}', ${f.lat}, ${f.lon})">B</button>
@@ -354,11 +351,11 @@ function escapeJs(str) {
   return String(str).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
-// expose functions to popup buttons
 window.saveFavorite = saveFavorite;
 window.removeFavorite = removeFavorite;
 window.zoomTo = zoomTo;
 window.setRouteStart = setRouteStart;
 window.setRouteEnd = setRouteEnd;
 window.clearRoute = clearRoute;
-``
+const AUTO_REFRESH_MS = 300000; // 5 minutes
+
