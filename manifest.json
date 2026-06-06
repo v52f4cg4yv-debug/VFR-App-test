@@ -1,0 +1,22 @@
+manifest.json
+{
+  "name": "Aviation Weather Map",
+  "short_name": "Aviation Map",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#0b1e2d",
+  "description": "FAA sectionals, radar, METAR, and favorite airports.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
