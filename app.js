@@ -1,11 +1,12 @@
 const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
-const AUTO_REFRESH_MS = 300000; // 5 min
+const AUTO_REFRESH_MS = 300000; // 5 minutes
 
 let map;
 let metarCluster;
 let favoriteLayer;
 let routeLayer = null;
 let userMarker = null;
+
 let userLat = 39.8283;
 let userLon = -98.5795;
 
@@ -13,10 +14,13 @@ let allStations = [];
 let routeStart = null;
 let routeEnd = null;
 
+// ---------------- STATUS ----------------
 function setStatus(text) {
-  document.getElementById("status").textContent = text;
+  const el = document.getElementById("status");
+  if (el) el.textContent = text;
 }
 
+// ---------------- MAP ----------------
 function initMap() {
   map = L.map("map").setView([userLat, userLon], 5);
 
@@ -35,19 +39,20 @@ function initMap() {
 
   favoriteLayer = L.layerGroup().addTo(map);
 
-  document.getElementById("refreshBtn").addEventListener("click", () => {
+  document.getElementById("refreshBtn")?.addEventListener("click", () => {
     loadNationwideMetar();
   });
 
-  document.getElementById("nearestBtn").addEventListener("click", () => {
+  document.getElementById("nearestBtn")?.addEventListener("click", () => {
     findNearestAirport();
   });
 
-  document.getElementById("clearRouteBtn").addEventListener("click", () => {
+  document.getElementById("clearRouteBtn")?.addEventListener("click", () => {
     clearRoute();
   });
 }
 
+// ---------------- COLORS ----------------
 function getColor(cat) {
   if (cat === "VFR") return "green";
   if (cat === "MVFR") return "blue";
@@ -59,12 +64,20 @@ function getColor(cat) {
 function makeDotIcon(color) {
   return L.divIcon({
     className: "",
-    html: `<div class="wx-dot" style="background:${color};"></div>`,
+    html: `<div style="
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      border:2px solid white;
+      background:${color};
+      box-shadow:0 0 4px rgba(0,0,0,0.5);
+    "></div>`,
     iconSize: [18, 18],
     iconAnchor: [9, 9]
   });
 }
 
+// ---------------- GEO HELPERS ----------------
 function toRad(deg) {
   return deg * Math.PI / 180;
 }
@@ -102,17 +115,19 @@ function initialHeading(lat1, lon1, lat2, lon2) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Favorites
+// ---------------- FAVORITES ----------------
 function getFavorites() {
   return JSON.parse(localStorage.getItem("favorites")) || [];
 }
 
 function saveFavorite(id, lat, lon) {
   let favs = getFavorites();
+
   if (!favs.find(f => f.id === id)) {
     favs.push({ id, lat, lon });
     localStorage.setItem("favorites", JSON.stringify(favs));
   }
+
   updateFavorites();
 }
 
@@ -126,12 +141,14 @@ function updateFavorites() {
   const favs = getFavorites();
   const favList = document.getElementById("favList");
 
+  if (!favList) return;
+
   if (favs.length === 0) {
     favList.innerHTML = "No favorites yet.";
   } else {
     favList.innerHTML = favs.map(f => `
-      <div class="fav-row">
-        <span>${escapeHtml(f.id)}</span>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(f.id)}</span>
         <button onclick="zoomTo(${f.lat}, ${f.lon})">📍</button>
         <button onclick="setRouteStart('${escapeJs(f.id)}', ${f.lat}, ${f.lon})">A</button>
         <button onclick="setRouteEnd('${escapeJs(f.id)}', ${f.lat}, ${f.lon})">B</button>
@@ -145,13 +162,15 @@ function updateFavorites() {
 
 function drawFavorites() {
   favoriteLayer.clearLayers();
+
   getFavorites().forEach(f => {
-    L.marker([f.lat, f.lon]).addTo(favoriteLayer)
+    L.marker([f.lat, f.lon])
+      .addTo(favoriteLayer)
       .bindPopup(`<b>⭐ ${escapeHtml(f.id)}</b>`);
   });
 }
 
-// Route planner
+// ---------------- ROUTE PLANNER ----------------
 function setRouteStart(id, lat, lon) {
   routeStart = { id, lat, lon };
   updateRouteDisplay();
@@ -167,10 +186,12 @@ function setRouteEnd(id, lat, lon) {
 function clearRoute() {
   routeStart = null;
   routeEnd = null;
+
   if (routeLayer) {
     map.removeLayer(routeLayer);
     routeLayer = null;
   }
+
   updateRouteDisplay();
 }
 
@@ -196,22 +217,27 @@ function drawRouteIfReady() {
 }
 
 function updateRouteDisplay() {
-  document.getElementById("routeFrom").textContent = routeStart ? routeStart.id : "—";
-  document.getElementById("routeTo").textContent = routeEnd ? routeEnd.id : "—";
+  const fromEl = document.getElementById("routeFrom");
+  const toEl = document.getElementById("routeTo");
+  const distEl = document.getElementById("routeDistance");
+  const hdgEl = document.getElementById("routeHeading");
+
+  if (fromEl) fromEl.textContent = routeStart ? routeStart.id : "—";
+  if (toEl) toEl.textContent = routeEnd ? routeEnd.id : "—";
 
   if (routeStart && routeEnd) {
     const nm = distanceNm(routeStart.lat, routeStart.lon, routeEnd.lat, routeEnd.lon);
     const hdg = initialHeading(routeStart.lat, routeStart.lon, routeEnd.lat, routeEnd.lon);
 
-    document.getElementById("routeDistance").textContent = `${nm.toFixed(1)} NM`;
-    document.getElementById("routeHeading").textContent = `${Math.round(hdg)}°`;
+    if (distEl) distEl.textContent = `${nm.toFixed(1)} NM`;
+    if (hdgEl) hdgEl.textContent = `${Math.round(hdg)}°`;
   } else {
-    document.getElementById("routeDistance").textContent = "—";
-    document.getElementById("routeHeading").textContent = "—";
+    if (distEl) distEl.textContent = "—";
+    if (hdgEl) hdgEl.textContent = "—";
   }
 }
 
-// Nearest airport
+// ---------------- NEAREST AIRPORT ----------------
 function findNearestAirport() {
   if (!allStations.length) return;
 
@@ -236,6 +262,7 @@ function findNearestAirport() {
   drawRouteIfReady();
 }
 
+// ---------------- MARKERS / POPUPS ----------------
 function addStationMarker(station) {
   const color = getColor(station.flight_category);
   const icon = makeDotIcon(color);
@@ -251,7 +278,7 @@ function addStationMarker(station) {
       Distance: ${nm.toFixed(1)} NM<br>
       Heading: ${Math.round(hdg)}°
     </div>
-    <div class="popup-actions">
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
       <button onclick="saveFavorite('${escapeJs(station.icao)}', ${station.lat}, ${station.lon})">⭐ Save</button>
       <button onclick="setRouteStart('${escapeJs(station.icao)}', ${station.lat}, ${station.lon})">From Here</button>
       <button onclick="setRouteEnd('${escapeJs(station.icao)}', ${station.lat}, ${station.lon})">To Here</button>
@@ -262,6 +289,7 @@ function addStationMarker(station) {
   metarCluster.addLayer(marker);
 }
 
+// ---------------- DATA LOADER ----------------
 async function loadNationwideMetar() {
   try {
     setStatus("Loading nationwide METAR…");
@@ -269,7 +297,7 @@ async function loadNationwideMetar() {
     const res = await fetch(`${WORKER_URL}/usa`);
     const data = await res.json();
 
-    allStations = data.data || [];
+    allStations = Array.isArray(data.data) ? data.data : [];
 
     metarCluster.clearLayers();
     allStations.forEach(addStationMarker);
@@ -284,10 +312,12 @@ async function loadNationwideMetar() {
   }
 }
 
+// ---------------- MAP HELPERS ----------------
 function zoomTo(lat, lon) {
   map.setView([lat, lon], 9);
 }
 
+// ---------------- STARTUP ----------------
 function startApp(lat, lon) {
   userLat = lat;
   userLon = lon;
@@ -310,6 +340,7 @@ if (navigator.geolocation) {
   startApp(userLat, userLon);
 }
 
+// ---------------- SAFE ESCAPING ----------------
 function escapeHtml(str) {
   return String(str)
     .replaceAll("&", "&amp;")
@@ -323,6 +354,7 @@ function escapeJs(str) {
   return String(str).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
+// expose popup-button functions
 window.saveFavorite = saveFavorite;
 window.removeFavorite = removeFavorite;
 window.zoomTo = zoomTo;
