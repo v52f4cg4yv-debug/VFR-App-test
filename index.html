@@ -72,7 +72,7 @@ async function loadData(lat, lon){
     const ids = airports.map(a=>a.icao_code).join(",");
 
     // 2️⃣ Get METAR via YOUR backend
-    const wxRes = await fetch(`${WORKER_URL}?ids=${encodeURIComponent(ids)}`);
+    const wxRes = await fetch(`${https://vfrmap.v52f4cg4yv.workers.dev/}?ids=${encodeURIComponent(ids)}`);
     const wxData = await wxRes.json();
 
     airportLayer.clearLayers();
