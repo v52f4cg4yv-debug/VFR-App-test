@@ -1,14 +1,38 @@
-const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";const WORKER_URL = "httpsContent = text;
+const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
+const AUTO_REFRESH_MS = 300000; // 5 minutes
+
+let map;
+let cluster;
+let favoriteLayer;
+let routeLine = null;
+let userLat = 39.8;
+let userLon = -98.6;
+let airports = [];
+
+// ---------------- STATUS ----------------
+function setStatus(text) {
+  var el = document.getElementById("status");
+  if (el) el.textContent = text;
 }
 
+// ---------------- COLORS / ICONS ----------------
 function color(cat) {
-  if (cat === "VFR") return "green";
-  if (cat === "MVFR") return "blue";
-  if (cat === "IFR") return "red";
-  if (cat === "LIFR") return "purple";
-  return "gray";
+  return cat === "VFR" ? "green" :
+         cat === "MVFR" ? "blue" :
+         cat === "IFR" ? "red" :
+         cat === "LIFR" ? "purple" : "gray";
 }
 
+function makeIcon(cat) {
+  return L.divIcon({
+    className: "",
+    html: `<div class="wx-dot" style="background:${color(cat)};"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+}
+
+// ---------------- GEO HELPERS ----------------
 function toRad(d) {
   return d * Math.PI / 180;
 }
@@ -19,6 +43,7 @@ function toDeg(r) {
 
 function distanceNM(a, b, c, d) {
   var R = 6371000;
+
   var p1 = toRad(a);
   var p2 = toRad(c);
   var dp = toRad(c - a);
@@ -29,6 +54,7 @@ function distanceNM(a, b, c, d) {
           Math.sin(dl / 2) * Math.sin(dl / 2);
 
   var y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+
   return (R * y) / 1852;
 }
 
@@ -45,6 +71,7 @@ function heading(a, b, c, d) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+// ---------------- FAVORITES ----------------
 function getFavs() {
   return JSON.parse(localStorage.getItem("fav") || "[]");
 }
@@ -71,16 +98,17 @@ function showFav() {
   if (!box) return;
 
   if (!f.length) {
-    box.innerHTML = "None";
+    box.innerHTML = "No favorites yet.";
+    drawFavMarkers();
     return;
   }
 
   box.innerHTML = f.map(function(x) {
     return `
-      <div>
-        ${x.id}
+      <div class="fav-row">
+        <span>${escapeHtml(x.id)}</span>
         <button onclick="zoom(${x.lat},${x.lon})">📍</button>
-        <button onclick="removeFavorite('${x.id}')">❌</button>
+        <button onclick="removeFavorite('${escapeJs(x.id)}')">❌</button>
       </div>
     `;
   }).join("");
@@ -92,16 +120,25 @@ function drawFavMarkers() {
   favoriteLayer.clearLayers();
   getFavs().forEach(function(x) {
     L.marker([x.lat, x.lon]).addTo(favoriteLayer)
-      .bindPopup("⭐ " + x.id);
+      .bindPopup("⭐ " + escapeHtml(x.id));
   });
 }
 
-function drawRoute(lat, lon) {
+// ---------------- ROUTE ----------------
+function drawRoute(lat, lon, id) {
   if (routeLine) map.removeLayer(routeLine);
 
   routeLine = L.polyline([[userLat, userLon], [lat, lon]], {
-    color: "yellow"
+    color: "yellow",
+    weight: 3
   }).addTo(map);
+
+  document.getElementById("routeFrom").textContent = "ME";
+  document.getElementById("routeTo").textContent = id || "Airport";
+  document.getElementById("routeDistance").textContent =
+    distanceNM(userLat, userLon, lat, lon).toFixed(1) + " NM";
+  document.getElementById("routeHeading").textContent =
+    Math.round(heading(userLat, userLon, lat, lon)) + "°";
 }
 
 function clearRoute() {
@@ -116,6 +153,7 @@ function clearRoute() {
   document.getElementById("routeHeading").textContent = "—";
 }
 
+// ---------------- NEAREST ----------------
 function nearest() {
   var best = null;
   var d = 999999;
@@ -130,16 +168,11 @@ function nearest() {
 
   if (best) {
     map.setView([best.lat, best.lon], 8);
-    drawRoute(best.lat, best.lon);
-
-    document.getElementById("routeFrom").textContent = "ME";
-    document.getElementById("routeTo").textContent = best.icao;
-    document.getElementById("routeDistance").textContent = d.toFixed(1) + " NM";
-    document.getElementById("routeHeading").textContent =
-      Math.round(heading(userLat, userLon, best.lat, best.lon)) + "°";
+    drawRoute(best.lat, best.lon, best.icao);
   }
 }
 
+// ---------------- BBOX LOADING ----------------
 function currentBBox() {
   var b = map.getBounds();
   return [
@@ -159,28 +192,26 @@ async function load() {
     var data = await res.json();
 
     airports = data.data || [];
-
     cluster.clearLayers();
 
     airports.forEach(function(a) {
       var nm = distanceNM(userLat, userLon, a.lat, a.lon).toFixed(1);
       var hdg = Math.round(heading(userLat, userLon, a.lat, a.lon));
 
-      var marker = L.circleMarker([a.lat, a.lon], {
-        radius: 6,
-        fillColor: color(a.flight_category),
-        color: "white",
-        weight: 1,
-        fillOpacity: 0.9
+      var marker = L.marker([a.lat, a.lon], {
+        icon: makeIcon(a.flight_category)
       });
 
       marker.bindPopup(`
-        <b>${a.icao}</b><br>
-        ${a.flight_category}<br>
-        <small>${a.raw_text || ""}</small><br>
+        <b>${escapeHtml(a.icao)}</b><br>
+        ${escapeHtml(a.flight_category)}<br>
+        <small>${escapeHtml(a.raw_text || "")}</small><br>
         ${nm} NM / ${hdg}°<br>
-        <button onclick="saveFavorite('${a.icao}',${a.lat},${a.lon})">⭐</button>
-        <button onclick="drawRoute(${a.lat},${a.lon})">✈️</button>
+        <div class="popup-actions">
+          <button onclick="saveFavorite('${escapeJs(a.icao)}',${a.lat},${a.lon})">⭐ Save</button>
+          <button onclick="drawRoute(${a.lat},${a.lon},'${escapeJs(a.icao)}')">✈️ Route</button>
+          <button onclick="zoom(${a.lat},${a.lon})">📍 Zoom</button>
+        </div>
       `);
 
       cluster.addLayer(marker);
@@ -193,6 +224,7 @@ async function load() {
   }
 }
 
+// ---------------- MAP ----------------
 function init() {
   map = L.map("map").setView([userLat, userLon], 5);
 
@@ -212,6 +244,8 @@ function init() {
 
   map.on("moveend", load);
 
+  L.marker([userLat, userLon]).addTo(map).bindPopup("You are here");
+
   load();
   setInterval(load, AUTO_REFRESH_MS);
 }
@@ -220,6 +254,21 @@ function zoom(lat, lon) {
   map.setView([lat, lon], 8);
 }
 
+// ---------------- SAFE ESCAPING ----------------
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeJs(str) {
+  return String(str).replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+}
+
+// ---------------- START ----------------
 navigator.geolocation.getCurrentPosition(
   function(pos) {
     userLat = pos.coords.latitude;
@@ -233,19 +282,8 @@ navigator.geolocation.getCurrentPosition(
   }
 );
 
+// Expose popup button functions
 window.saveFavorite = saveFavorite;
 window.removeFavorite = removeFavorite;
 window.zoom = zoom;
 window.drawRoute = drawRoute;
-const AUTO_REFRESH_MS = 300000; // 5 minutes
-
-let map;
-let cluster;
-let favoriteLayer;
-let routeLine = null;
-let userLat = 39.8;
-let userLon = -98.6;
-let airports = [];
-
-function setStatus(text) {
-  var el = document.getElementById("status");
