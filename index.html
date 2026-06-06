@@ -2,553 +2,120 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>Aviation Weather Map</title>
 
-  ./manifest.json
-  <meta name="theme-color" content="#0b1e2d" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     html, body, #map {
       height: 100%;
-      width: 100%;
       margin: 0;
-      padding: 0;
-      font-family: Arial, sans-serif;
-      background: #000;
-    }
-
-    #map {
-      position: relative;
     }
 
     #topbar {
       position: absolute;
-      top: 12px;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      background: rgba(10, 17, 27, 0.9);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #fff;
-      padding: 10px 14px;
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-      backdrop-filter: blur(6px);
-      min-width: 280px;
-      justify-content: space-between;
-    }
-
-    #brand {
-      font-weight: 700;
-      letter-spacing: 0.2px;
-      white-space: nowrap;
-    }
-
-    #statusChip {
-      font-size: 12px;
-      background: #17314a;
-      color: #d9ecff;
-      padding: 6px 10px;
-      border-radius: 999px;
-      white-space: nowrap;
-    }
-
-    #controls {
-      position: absolute;
-      right: 12px;
-      bottom: 120px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .app-btn {
-      border: none;
-      border-radius: 12px;
-      background: rgba(10, 17, 27, 0.9);
+      background: black;
       color: white;
-      padding: 12px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      min-width: 125px;
-      text-align: center;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    .app-btn:hover {
-      background: rgba(20, 35, 52, 0.95);
-    }
-
-    #favoritesPanel {
-      position: absolute;
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
-      z-index: 1000;
-      max-height: 32vh;
-      overflow: auto;
-      background: rgba(10, 17, 27, 0.92);
-      color: white;
-      border-radius: 16px;
-      padding: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    #favoritesHeader {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-weight: bold;
-    }
-
-    .favorite-row {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 8px;
-      align-items: center;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      font-size: 14px;
-    }
-
-    .favorite-row:last-child {
-      border-bottom: none;
-    }
-
-    .small-btn {
-      border: none;
+      padding: 10px;
       border-radius: 10px;
-      padding: 8px 10px;
-      cursor: pointer;
-      background: #17314a;
-      color: white;
-      font-size: 12px;
-    }
-
-    .small-btn.danger {
-      background: #5a2430;
-    }
-
-    .small-btn.gold {
-      background: #6b5412;
-      color: #ffe89a;
-    }
-
-    .leaflet-popup-content {
-      font-size: 14px;
-      line-height: 1.35;
-      min-width: 200px;
-    }
-
-    .popup-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .popup-actions button {
-      border: none;
-      border-radius: 10px;
-      padding: 8px 10px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .popup-center {
-      background: #17314a;
-      color: white;
-    }
-
-    .popup-save {
-      background: #6b5412;
-      color: #ffe89a;
-    }
-
-    .favorite-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      background: #d4a72c;
-      color: #1b1403;
-      font-size: 15px;
-      border: 2px solid rgba(255,255,255,0.9);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-    }
-
-    @media (max-width: 640px) {
-      #topbar {
-        width: calc(100% - 24px);
-        min-width: 0;
-      }
-
-      #controls {
-        right: 10px;
-        bottom: 145px;
-      }
-
-      .app-btn {
-        min-width: 106px;
-        font-size: 13px;
-        padding: 10px 12px;
-      }
     }
   </style>
 </head>
+
 <body>
-  <div id="topbar">
-    <div id="brand">✈️ Aviation Map</div>
-    <div id="statusChip">Starting…</div>
-  </div>
 
-  <div id="controls">
-    <button class="app-btn" onclick="zoomToUser()">📍 My Area</button>
-    <button class="app-btn" onclick="refreshWeather()">🔄 Refresh WX</button>
-    <button class="app-btn" onclick="toggleFavoritesPanel()">⭐ Favorites</button>
-  </div>
+<div id="topbar">✈️ Aviation Map</div>
+<div id="map"></div>
 
-  <div id="favoritesPanel">
-    <div id="favoritesHeader">
-      <span>⭐ Favorite Airports</span>
-      <button class="small-btn danger" onclick="clearFavorites()">Clear All</button>
-    </div>
-    <div id="favoritesList">No favorites yet.</div>
-  </div>
+<script>
+const AIRLABS_API_KEY = "YOUR_AIRLABS_KEY";
+const WORKER_URL = "YOUR_WORKER_URL";
 
-  <div id="map"></div>
+// ---------------- MAP ----------------
+const map = L.map("map").setView([41.7, -86.9], 9);
 
-  https://unpkg.com/leaflet@1.9.4/dist/leaflet.jsscript>
+const sectional = L.tileLayer(
+  "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}",
+  {maxZoom:12}
+).addTo(map);
 
-  <script>
-    let map;
-    let airportLayer;
-    let favoritesLayer;
-    let userMarker;
+const airportLayer = L.layerGroup().addTo(map);
 
-    let currentLat = 41.7075;   // default fallback
-    let currentLon = -86.8950;  // default fallback
-    let favoritesPanelVisible = true;
+// ---------------- COLORS ----------------
+function getColor(cat) {
+  if (cat === "VFR") return "green";
+  if (cat === "MVFR") return "blue";
+  if (cat === "IFR") return "red";
+  if (cat === "LIFR") return "purple";
+  return "gray";
+}
 
-    const statusChip = document.getElementById("statusChip");
-    const favoritesList = document.getElementById("favoritesList");
-    const favoritesPanel = document.getElementById("favoritesPanel");
-
-    function setStatus(text) {
-      statusChip.textContent = text;
-    }
-
-    function escapeHtml(text) {
-      return String(text)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-    }
-
-    // FAA sectional charts
-    const sectionalLayer = L.tileLayer(
-      "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}",
-      {
-        attribution: "FAA Sectional",
-        minZoom: 8,
-        maxZoom: 12,
-        opacity: 0.95
-      }
+// ---------------- DATA ----------------
+async function loadData(lat, lon){
+  try{
+    // 1️⃣ Get airports
+    const res = await fetch(
+      `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
     );
+    const data = await res.json();
 
-    // Dark fallback base map
-    const darkMap = L.tileLayer(
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-      {
-        attribution: "&copy; OpenStreetMap &copy; CARTO",
-        subdomains: "abcd",
-        maxZoom: 19
-      }
-    );
+    const airports = data.response.airports.slice(0,10);
 
-    // Best-effort NOAA weather/radar-style overlay
-    const weatherOverlay = L.tileLayer.wms(
-      "https://nowcoast.noaa.gov/arcgis/services/nowcoast/analysis_meteohydro_sfc_qpe_time/MapServer/WMSServer",
-      {
-        layers: "1",
-        format: "image/png",
-        transparent: true,
-        opacity: 0.55,
-        attribution: "NOAA nowCOAST"
-      }
-    );
+    const ids = airports.map(a=>a.icao_code).join(",");
 
-    function getCategoryColor(cat) {
-      if (cat === "VFR") return "green";
-      if (cat === "MVFR") return "blue";
-      if (cat === "IFR") return "red";
-      if (cat === "LIFR") return "purple";
-      return "gray";
-    }
+    // 2️⃣ Get METAR via YOUR backend
+    const wxRes = await fetch(`${WORKER_URL}?ids=${encodeURIComponent(ids)}`);
+    const wxData = await wxRes.json();
 
-    function favoriteStorageKey() {
-      return "favoriteAirports";
-    }
+    airportLayer.clearLayers();
 
-    function getFavorites() {
-      try {
-        return JSON.parse(localStorage.getItem(favoriteStorageKey())) || [];
-      } catch {
-        return [];
-      }
-    }
+    airports.forEach(a => {
+      const wx = wxData.data.find(x => x.icao === a.icao_code);
 
-    function setFavorites(items) {
-      localStorage.setItem(favoriteStorageKey(), JSON.stringify(items));
-    }
+      const cat = wx?.flight_category || "Unknown";
+      const raw = wx?.raw_text || "";
 
-    function saveFavorite(lat, lon, id, category) {
-      const favorites = getFavorites();
-      const alreadyExists = favorites.some(f => f.id === id);
+      L.circleMarker([a.lat,a.lng],{
+        radius:7,
+        fillColor:getColor(cat),
+        color:"white",
+        weight:1,
+        fillOpacity:0.9
+      })
+      .addTo(airportLayer)
+      .bindPopup(`
+        <b>${a.icao_code}</b><br>
+        ${cat}<br>
+        ${raw}
+      `);
+    });
 
-      if (!alreadyExists) {
-        favorites.push({ id, lat, lon, category });
-        setFavorites(favorites);
-      }
+  }catch(e){
+    console.error(e);
+  }
+}
 
-      loadFavorites();
-      setStatus(`Saved ${id}`);
-    }
+// ---------------- LOCATION ----------------
+navigator.geolocation.getCurrentPosition(pos=>{
+  const lat = pos.coords.latitude;
+  const lon = pos.coords.longitude;
 
-    function removeFavorite(id) {
-      const favorites = getFavorites().filter(f => f.id !== id);
-      setFavorites(favorites);
-      loadFavorites();
-      setStatus(`Removed ${id}`);
-    }
+  map.setView([lat,lon],9);
+  loadData(lat,lon);
 
-    function clearFavorites() {
-      localStorage.removeItem(favoriteStorageKey());
-      loadFavorites();
-      setStatus("Favorites cleared");
-    }
+},()=>{
+  loadData(41.7,-86.9);
+});
 
-    function centerAirport(lat, lon, id = "") {
-      map.setView([lat, lon], 10);
-      if (id) setStatus(`Centered on ${id}`);
-    }
+</script>
 
-    function renderFavoritesList(favorites) {
-      if (!favorites.length) {
-        favoritesList.innerHTML = "No favorites yet.";
-        return;
-      }
-
-      favoritesList.innerHTML = favorites.map(fav => `
-        <div class="favorite-row">
-          <div>
-            <strong>${escapeHtml(fav.id)}</strong>
-            ${fav.category ? `<div style="font-size:12px;opacity:0.8">${escapeHtml(fav.category)}</div>` : ""}
-          </div>
-          <button class="small-btn" onclick="centerAirport(${fav.lat}, ${fav.lon}, '${escapeHtml(fav.id)}')">Center</button>
-          <button class="small-btn danger" onclick="removeFavorite('${escapeHtml(fav.id)}')">Remove</button>
-        </div>
-      `).join("");
-    }
-
-    function addFavoriteMarker(fav) {
-      const starIcon = L.divIcon({
-        className: "",
-        html: '<div class="favorite-icon">★</div>',
-        iconSize: [26, 26],
-        iconAnchor: [13, 13]
-      });
-
-      L.marker([fav.lat, fav.lon], { icon: starIcon })
-        .addTo(favoritesLayer)
-        .bindPopup(`
-          <b>⭐ ${escapeHtml(fav.id)}</b><br>
-          ${fav.category ? `Category: ${escapeHtml(fav.category)}<br>` : ""}
-          <div class="popup-actions">
-            <button class="popup-center" onclick="centerAirport(${fav.lat}, ${fav.lon}, '${escapeHtml(fav.id)}')">Center</button>
-            <button class="popup-save" onclick="removeFavorite('${escapeHtml(fav.id)}')">Remove</button>
-          </div>
-        `)
-        .on("click", function () {
-          map.setView([fav.lat, fav.lon], 10);
-        });
-    }
-
-    function loadFavorites() {
-      const favorites = getFavorites();
-      favoritesLayer.clearLayers();
-      favorites.forEach(addFavoriteMarker);
-      renderFavoritesList(favorites);
-    }
-
-    function toggleFavoritesPanel() {
-      favoritesPanelVisible = !favoritesPanelVisible;
-      favoritesPanel.style.display = favoritesPanelVisible ? "block" : "none";
-    }
-
-    function zoomToUser() {
-      map.setView([currentLat, currentLon], 9);
-      if (userMarker) userMarker.openPopup();
-      setStatus("Centered on your area");
-    }
-
-    function initMap(lat, lon) {
-      map = L.map("map", {
-        center: [lat, lon],
-        zoom: 9,
-        layers: [sectionalLayer, weatherOverlay]
-      });
-
-      airportLayer = L.layerGroup().addTo(map);
-      favoritesLayer = L.layerGroup().addTo(map);
-
-      const baseMaps = {
-        "FAA Sectional": sectionalLayer,
-        "Dark Map": darkMap
-      };
-
-      const overlayMaps = {
-        "Weather Overlay": weatherOverlay,
-        "Weather (METAR)": airportLayer,
-        "Favorites": favoritesLayer
-      };
-
-      L.control.layers(baseMaps, overlayMaps, { position: "topright" }).addTo(map);
-
-      userMarker = L.marker([lat, lon])
-        .addTo(map)
-        .bindPopup("You are here");
-
-      loadFavorites();
-    }
-
-    async function getAviationData(lat, lon) {
-      const url = `https://api.aviationapi.com/v1/metar?lat=${lat}&lon=${lon}&radius=80`;
-
-      try {
-        airportLayer.clearLayers();
-        setStatus("Loading METAR…");
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Weather request failed");
-
-        const data = await res.json();
-        let count = 0;
-
-        Object.values(data).forEach(airport => {
-          if (!airport || !airport.flight_category || !airport.latitude || !airport.longitude) return;
-
-          count += 1;
-
-          const color = getCategoryColor(airport.flight_category);
-          const stationId = airport.station_id || airport.icao || "Unknown";
-          const rawText = airport.raw_text || "";
-
-          const marker = L.circleMarker(
-            [airport.latitude, airport.longitude],
-            {
-              radius: 7,
-              fillColor: color,
-              color: "white",
-              weight: 1.5,
-              fillOpacity: 0.9
-            }
-          )
-          .bindPopup(`
-            <b>${escapeHtml(stationId)}</b><br>
-            Category: ${escapeHtml(airport.flight_category)}<br>
-            Wind: ${escapeHtml(airport.wind_speed_kt || "N/A")} kt<br>
-            Visibility: ${escapeHtml(airport.visibility_statute_mi || "N/A")} mi<br>
-            ${rawText ? `<div style="margin-top:8px;font-size:12px;">${escapeHtml(rawText)}</div>` : ""}
-            <div class="popup-actions">
-              <button class="popup-center" onclick="centerAirport(${airport.latitude}, ${airport.longitude}, '${escapeHtml(stationId)}')">Center</button>
-              <button class="popup-save" onclick="saveFavorite(${airport.latitude}, ${airport.longitude}, '${escapeHtml(stationId)}', '${escapeHtml(airport.flight_category)}')">Save</button>
-            </div>
-          `)
-          .on("click", function (e) {
-            map.setView(e.latlng, 10);
-          });
-
-          marker.addTo(airportLayer);
-        });
-
-        setStatus(`Live METAR loaded (${count})`);
-      } catch (error) {
-        console.error(error);
-        setStatus("Weather load failed");
-      }
-    }
-
-    function refreshWeather() {
-      getAviationData(currentLat, currentLon);
-    }
-
-    function startApp(lat, lon) {
-      currentLat = lat;
-      currentLon = lon;
-      initMap(lat, lon);
-      getAviationData(lat, lon);
-    }
-
-    // make popup/button functions available globally
-    window.centerAirport = centerAirport;
-    window.saveFavorite = saveFavorite;
-    window.removeFavorite = removeFavorite;
-    window.clearFavorites = clearFavorites;
-    window.refreshWeather = refreshWeather;
-    window.zoomToUser = zoomToUser;
-    window.toggleFavoritesPanel = toggleFavoritesPanel;
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          startApp(position.coords.latitude, position.coords.longitude);
-        },
-        () => {
-          setStatus("Location denied — using default");
-          startApp(41.7075, -86.8950);
-        }
-      );
-    } else {
-      setStatus("No geolocation — using default");
-      startApp(41.7075, -86.8950);
-    }
-
-    // Register service worker for PWA/offline shell
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js")
-          .then(() => console.log("Service worker registered"))
-          .catch(err => console.error("Service worker registration failed:", err));
-      });
-    }
-  </script>
 </body>
 </html>
