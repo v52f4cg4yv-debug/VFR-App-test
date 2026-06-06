@@ -36,21 +36,15 @@
   </style>
 </head>
 
-  <body>
+ <body>
 
-  <!-- Status text -->
   <div id="status">Loading airports...</div>
-
-  <!-- Map container -->
   <div id="map"></div>
 
-  <!-- ✅ Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- ✅ Your app code -->
   <script>
-
-    const AIRLABS_API_KEY = "661ae3f2-835e-469d-ad8b-c1d88bbef712";
+    const AIRLABS_API_KEY = "PASTE_YOUR_NEW_KEY_HERE";
 
     const statusEl = document.getElementById("status");
 
@@ -58,10 +52,8 @@
       statusEl.textContent = text;
     }
 
-    // Create map
     const map = L.map("map").setView([41.7, -86.9], 8);
 
-    // Base map layer
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap"
     }).addTo(map);
@@ -80,32 +72,59 @@
       try {
         setStatus("Finding airports...");
 
-        const res = await fetch(
-          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
-        );
+        const nearbyUrl = `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`;
+        const res = await fetch(nearbyUrl);
+
+        if (!res.ok) {
+          throw new Error(`Nearby API HTTP ${res.status}`);
+        }
 
         const data = await res.json();
+        console.log("AirLabs response:", data);
 
-        // ✅ FIXED HERE
-        const airports = data.airports.slice(0, 10);
+        const airports =
+          Array.isArray(data.airports) ? data.airports :
+          Array.isArray(data.response?.airports) ? data.response.airports :
+          [];
 
-        const ids = airports.map(a => a.icao_code).join(",");
+        if (!airports.length) {
+          console.error("No airports returned:", data);
+          setStatus("No nearby airports returned");
+          return;
+        }
+
+        const topAirports = airports
+          .filter(a => a.icao_code && a.lat != null && a.lng != null)
+          .slice(0, 10);
+
+        if (!topAirports.length) {
+          setStatus("Nearby airports missing ICAO/coords");
+          return;
+        }
+
+        const ids = topAirports.map(a => a.icao_code).join(",");
 
         setStatus("Loading METAR...");
 
-        const metarRes = await fetch(
-          `https://aviationweather.gov/api/data/metar?ids=${ids}&format=json`
-        );
+        const metarUrl = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ids)}&format=json`;
+        const metarRes = await fetch(metarUrl);
+
+        if (!metarRes.ok) {
+          throw new Error(`METAR API HTTP ${metarRes.status}`);
+        }
 
         const metars = await metarRes.json();
+        console.log("METAR response:", metars);
 
         layer.clearLayers();
 
-        airports.forEach(a => {
-          const m = metars.find(x => x.icaoId === a.icao_code);
+        topAirports.forEach(a => {
+          const m = Array.isArray(metars)
+            ? metars.find(x => x.icaoId === a.icao_code)
+            : null;
 
           const cat = m?.flight_category || "Unknown";
-          const raw = m?.rawOb || "";
+          const raw = m?.rawOb || "No METAR text";
 
           L.circleMarker([a.lat, a.lng], {
             radius: 6,
@@ -116,37 +135,43 @@
           })
           .addTo(layer)
           .bindPopup(`
-            <b>${a.name}</b><br>
+            <b>${a.name || a.icao_code}</b><br>
             ${a.icao_code}<br>
             ${cat}<br>
             ${raw}
           `);
         });
 
-        setStatus("Done ✅");
+        setStatus(`Loaded ${topAirports.length} airports ✅`);
 
       } catch (e) {
-        console.error(e);
-        setStatus("Error loading data");
+        console.error("loadData error:", e);
+        setStatus(`Error loading data`);
       }
     }
 
-    // Get location
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-
-        map.setView([lat, lon], 9);
-        loadData(lat, lon);
-      });
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          map.setView([lat, lon], 9);
+          loadData(lat, lon);
+        },
+        err => {
+          console.error("Geolocation error:", err);
+          setStatus("Using fallback location");
+          loadData(41.7, -86.9);
+        }
+      );
     } else {
+      setStatus("Geolocation unavailable, using fallback");
       loadData(41.7, -86.9);
     }
-
   </script>
 
 </body>
+
     
 
 </html>
