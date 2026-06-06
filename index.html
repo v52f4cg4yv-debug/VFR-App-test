@@ -1,145 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-UTF-8" /><head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VFR Map</title>
+<head>
+    <meta charset="UTF-8">
+    <title>Aviation Weather Map</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet CSS -->
+    https://unpkg.com/leaflet/dist/leaflet.css
 
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-    }
-
-    #map {
-      height: 100%;
-      width: 100%;
-    }
-
-    #status {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: black;
-      color: white;
-      padding: 8px;
-      border-radius: 8px;
-      font-family: Arial;
-      font-size: 14px;
-    }
-  </style>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        #map { height: 100vh; }
+        #status {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+    </style>
 </head>
-
 <body>
 
-  <div id="status">Loading airports...</div>
-  <div id="map"></div>
+<div id="status">Loading...</div>
+<div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet JS -->
+https://unpkg.com/leaflet/dist/leaflet.jsscript>
 
-  <script>
-    const AIRLABS_API_KEY = "REPLACE_WITH_YOUR_NEW_KEY";
+<script>
+let map, userMarker, airportLayer;
 
-    const statusEl = document.getElementById("status");
-
-    function setStatus(text) {
-      statusEl.textContent = text;
+// ✅ FAA Sectional Layer (REAL charts)
+const sectionalLayer = L.tileLayer(
+    'https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}',
+    {
+        attribution: 'FAA Sectional Charts',
+        minZoom: 8,
+        maxZoom: 12,
+        opacity: 0.9
     }
+);
 
-    const map = L.map("map").setView([41.7, -86.9], 8);
-
-    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
-    const sectional = L.tileLayer("https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg");
-
-    street.addTo(map);
-
-    L.control.layers({
-      "Map": street,
-      "Sectional": sectional
-    }).addTo(map);
-
-    const layer = L.layerGroup().addTo(map);
-
-    function getColor(cat) {
-      if (cat === "VFR") return "green";
-      if (cat === "MVFR") return "blue";
-      if (cat === "IFR") return "red";
-      if (cat === "LIFR") return "purple";
-      return "gray";
+// ✅ Dark map (backup)
+const darkMap = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    {
+        attribution: '&copy; OpenStreetMap &copy; CARTO',
+        subdomains: 'abcd',
+        maxZoom: 19
     }
+);
 
-    // TEMP classification (random until backend added)
-    function fakeCategory() {
-      const types = ["VFR", "MVFR", "IFR"];
-      return types[Math.floor(Math.random() * types.length)];
-    }
+function initMap(lat, lon) {
+    map = L.map('map', {
+        center: [lat, lon],
+        zoom: 9,
+        layers: [sectionalLayer] // ✅ default = sectional!
+    });
 
-    async function loadData(lat, lon) {
-      try {
-        setStatus("Finding airports...");
+    airportLayer = L.layerGroup().addTo(map);
 
-        const res = await fetch(
-          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
-        );
+    const baseMaps = {
+        "FAA Sectional": sectionalLayer,
+        "Dark Map": darkMap
+    };
 
+    const overlayMaps = {
+        "Weather (METAR)": airportLayer
+    };
+
+    L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+    userMarker = L.marker([lat, lon])
+        .addTo(map)
+        .bindPopup("You are here")
+        .openPopup();
+}
+
+// ✅ Category colors
+function getCategoryColor(cat) {
+    if (cat === "VFR") return "green";
+    if (cat === "MVFR") return "blue";
+    if (cat === "IFR") return "red";
+    if (cat === "LIFR") return "purple";
+    return "gray";
+}
+
+// ✅ METAR fetch
+async function getAviationData(lat, lon) {
+    const url = `https://api.aviationapi.com/v1/metar?lat=${lat}&lon=${lon}&radius=80`;
+
+    try {
+        airportLayer.clearLayers();
+
+        const res = await fetch(url);
         const data = await res.json();
-        console.log("AirLabs response:", data);
 
-        const airports = data.response?.airports || data.airports || [];
+        document.getElementById("status").textContent = "Live METAR loaded";
 
-        if (!airports.length) {
-          setStatus("No airports found");
-          return;
-        }
+        Object.values(data).forEach(airport => {
+            if (!airport || !airport.flight_category) return;
 
-        const top = airports.slice(0, 10);
+            const color = getCategoryColor(airport.flight_category);
 
-        layer.clearLayers();
+            const marker = L.circleMarker(
+                [airport.latitude, airport.longitude],
+                {
+                    radius: 7,
+                    fillColor: color,
+                    color: "white",
+                    weight: 1.5,
+                    fillOpacity: 0.9
+                }
+            ).bindPopup(`
+                <b>${airport.station_id}</b><br>
+                ${airport.raw_text || ""}
+            `);
 
-        top.forEach(a => {
-          if (!a.icao_code) return;
-
-          const cat = fakeCategory(); // placeholder
-
-          L.circleMarker([a.lat, a.lng], {
-            radius: 7,
-            fillColor: getColor(cat),
-            color: "white",
-            weight: 1,
-            fillOpacity: 0.9
-          })
-          .addTo(layer)
-          .bindPopup(`
-            <b>${a.name}</b><br>
-            ${a.icao_code}<br>
-            ${cat}
-          `);
+            marker.addTo(airportLayer);
         });
 
-        setStatus("Loaded ✅");
-
-      } catch (e) {
+    } catch (e) {
         console.error(e);
-        setStatus("Error loading data");
-      }
+        document.getElementById("status").textContent = "Error loading weather";
     }
+}
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
+// ✅ Location
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
 
-        map.setView([lat, lon], 9);
-        loadData(lat, lon);
-      });
-    } else {
-      loadData(41.7, -86.9);
-    }
+        initMap(lat, lon);
+        getAviationData(lat, lon);
 
-  </script>
+    }, () => {
+        const lat = 41.7075;
+        const lon = -86.8950;
+
+        initMap(lat, lon);
+        getAviationData(lat, lon);
+    });
+}
+</script>
 
 </body>
 </html>
