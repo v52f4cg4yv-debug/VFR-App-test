@@ -44,7 +44,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    const AIRLABS_API_KEY = "PASTE_YOUR_NEW_KEY_HERE";
+    const AIRLABS_API_KEY = "PASTE_YOUR_CURRENT_KEY_HERE";
 
     const statusEl = document.getElementById("status");
 
@@ -72,53 +72,41 @@
       try {
         setStatus("Finding airports...");
 
-        const nearbyUrl = `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`;
-        const res = await fetch(nearbyUrl);
-
-        if (!res.ok) {
-          throw new Error(`Nearby API HTTP ${res.status}`);
-        }
+        const res = await fetch(
+          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
+        );
 
         const data = await res.json();
         console.log("AirLabs response:", data);
 
         const airports =
-          Array.isArray(data.airports) ? data.airports :
-          Array.isArray(data.response?.airports) ? data.response.airports :
+          Array.isArray(data.airports) ? data.airports.slice(0, 10) :
+          Array.isArray(data.response?.airports) ? data.response.airports.slice(0, 10) :
           [];
 
         if (!airports.length) {
-          console.error("No airports returned:", data);
           setStatus("No nearby airports returned");
+          console.error("Unexpected AirLabs payload:", data);
           return;
         }
 
-        const topAirports = airports
-          .filter(a => a.icao_code && a.lat != null && a.lng != null)
-          .slice(0, 10);
-
-        if (!topAirports.length) {
-          setStatus("Nearby airports missing ICAO/coords");
-          return;
-        }
-
-        const ids = topAirports.map(a => a.icao_code).join(",");
+        const ids = airports
+          .filter(a => a.icao_code)
+          .map(a => a.icao_code)
+          .join(",");
 
         setStatus("Loading METAR...");
 
-        const metarUrl = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ids)}&format=json`;
-        const metarRes = await fetch(metarUrl);
-
-        if (!metarRes.ok) {
-          throw new Error(`METAR API HTTP ${metarRes.status}`);
-        }
+        const metarRes = await fetch(
+          `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ids)}&format=json`
+        );
 
         const metars = await metarRes.json();
-        console.log("METAR response:", metars);
-
         layer.clearLayers();
 
-        topAirports.forEach(a => {
+        airports.forEach(a => {
+          if (a.lat == null || a.lng == null) return;
+
           const m = Array.isArray(metars)
             ? metars.find(x => x.icaoId === a.icao_code)
             : null;
@@ -136,17 +124,17 @@
           .addTo(layer)
           .bindPopup(`
             <b>${a.name || a.icao_code}</b><br>
-            ${a.icao_code}<br>
+            ${a.icao_code || ""}<br>
             ${cat}<br>
             ${raw}
           `);
         });
 
-        setStatus(`Loaded ${topAirports.length} airports ✅`);
+        setStatus(`Loaded ${airports.length} airports ✅`);
 
       } catch (e) {
         console.error("loadData error:", e);
-        setStatus(`Error loading data`);
+        setStatus("Error loading data");
       }
     }
 
@@ -158,20 +146,17 @@
           map.setView([lat, lon], 9);
           loadData(lat, lon);
         },
-        err => {
-          console.error("Geolocation error:", err);
+        () => {
           setStatus("Using fallback location");
           loadData(41.7, -86.9);
         }
       );
     } else {
-      setStatus("Geolocation unavailable, using fallback");
+      setStatus("Using fallback location");
       loadData(41.7, -86.9);
     }
   </script>
 
 </body>
-
     
-
 </html>
