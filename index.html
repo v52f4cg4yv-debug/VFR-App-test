@@ -1,56 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <title>VFR Map</title>
+<title>VFR Map</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-    }
+<style>
+html, body, #map {
+  height: 100%;
+  margin: 0;
+}
 
-    #topbar {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: black;
-      color: white;
-      padding: 8px;
-      border-radius: 10px;
-    }
+#topbar {
+  position:absolute;
+  top:10px;
+  left:50%;
+  transform:translateX(-50%);
+  background:black;
+  color:white;
+  padding:8px;
+  border-radius:10px;
+  z-index:1000;
+}
 
-    #favorites {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: black;
-      color: white;
-      padding: 10px;
-      border-radius: 10px;
-      max-height: 200px;
-      overflow: auto;
-      font-size: 14px;
-    }
+#controls {
+  position:absolute;
+  top:60px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:10px;
+  border-radius:10px;
+  z-index:1000;
+}
 
-    button {
-      margin: 2px;
-      font-size: 12px;
-    }
-  </style>
+#favorites {
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:10px;
+  border-radius:10px;
+  max-height:200px;
+  overflow:auto;
+  z-index:1000;
+}
+</style>
 </head>
 
 <body>
 
 <div id="topbar">✈️ VFR Map</div>
+
+<div id="controls">
+  <button onclick="findNearest()">🎯 Nearest</button>
+  <button onclick="clearRoute()">✈️ Clear Route</button>
+</div>
 
 <div id="favorites">
   <b>⭐ Favorites</b>
@@ -59,7 +69,198 @@
 
 <div id="map"></div>
 
-<script src="app.js"></script>
+<script>
+
+// ✅ KEYS
+const AIRLABS_API_KEY = "661ae3f2-835e-469d-ad8b-c1d88bbef712";
+const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
+
+// MAP
+const map = L.map("map").setView([41.7, -86.9], 9);
+
+L.tileLayer(
+  "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}",
+  {maxZoom:12}
+).addTo(map);
+
+const airportLayer = L.layerGroup().addTo(map);
+const favoriteLayer = L.layerGroup().addTo(map);
+let routeLine = null;
+
+let airportDataGlobal = [];
+let userLat = 41.7;
+let userLon = -86.9;
+
+// COLORS
+function getColor(cat){
+  if(cat==="VFR") return "green";
+  if(cat==="MVFR") return "blue";
+  if(cat==="IFR") return "red";
+  if(cat==="LIFR") return "purple";
+  return "gray";
+}
+
+// FAVORITES
+function getFavorites(){
+  return JSON.parse(localStorage.getItem("favorites")) || [];
+}
+
+function saveFavorite(id, lat, lon){
+  let favs = getFavorites();
+
+  if(!favs.find(f=>f.id===id)){
+    favs.push({id,lat,lon});
+    localStorage.setItem("favorites", JSON.stringify(favs));
+  }
+
+  updateFavorites();
+}
+
+function removeFavorite(id){
+  let favs = getFavorites().filter(f=>f.id!==id);
+  localStorage.setItem("favorites", JSON.stringify(favs));
+  updateFavorites();
+}
+
+function updateFavorites(){
+  const favs = getFavorites();
+
+  document.getElementById("favList").innerHTML =
+    favs.map(f=>`
+      <div>
+        ${f.id}
+        <button onclick="zoomTo(${f.lat},${f.lon})">📍</button>
+        <button onclick="drawRoute(${userLat},${userLon},${f.lat},${f.lon})">✈️</button>
+        <button onclick="removeFavorite('${f.id}')">❌</button>
+      </div>
+    `).join("");
+
+  favoriteLayer.clearLayers();
+
+  favs.forEach(f=>{
+    L.marker([f.lat,f.lon]).addTo(favoriteLayer)
+      .bindPopup(`⭐ ${f.id}`);
+  });
+}
+
+function zoomTo(lat,lon){
+  map.setView([lat,lon],10);
+}
+
+// ROUTE
+function drawRoute(lat1,lon1,lat2,lon2){
+  if(routeLine){
+    map.removeLayer(routeLine);
+  }
+
+  routeLine = L.polyline([
+    [lat1,lon1],
+    [lat2,lon2]
+  ], {color:"yellow"}).addTo(map);
+}
+
+function clearRoute(){
+  if(routeLine){
+    map.removeLayer(routeLine);
+  }
+}
+
+// NEAREST
+function findNearest(){
+  let nearest = null;
+  let minDist = Infinity;
+
+  airportDataGlobal.forEach(a=>{
+    const d = distance(userLat,userLon,a.lat,a.lng);
+    if(d < minDist){
+      minDist = d;
+      nearest = a;
+    }
+  });
+
+  if(nearest){
+    map.setView([nearest.lat,nearest.lng],11);
+
+    drawRoute(userLat,userLon,nearest.lat,nearest.lng);
+  }
+}
+
+// distance calc
+function distance(lat1,lon1,lat2,lon2){
+  return Math.sqrt((lat2-lat1)**2 + (lon2-lon1)**2);
+}
+
+// DATA
+async function loadData(lat,lon){
+  try{
+    const res = await fetch(
+      `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
+    );
+
+    const data = await res.json();
+    const airports = (data.response.airports||[]).slice(0,10);
+
+    airportDataGlobal = airports;
+
+    const ids = airports.map(a=>a.icao_code).join(",");
+
+    const wxRes = await fetch(`${WORKER_URL}?ids=${encodeURIComponent(ids)}`);
+    const wxData = await wxRes.json();
+
+    airportLayer.clearLayers();
+
+    airports.forEach(a=>{
+      const wx = wxData.data.find(x=>x.icao===a.icao_code);
+
+      const cat = wx?.flight_category || "Unknown";
+      const raw = wx?.raw_text || "";
+
+      L.circleMarker([a.lat,a.lng],{
+        radius:7,
+        fillColor:getColor(cat),
+        color:"white",
+        weight:1,
+        fillOpacity:0.9
+      })
+      .addTo(airportLayer)
+      .bindPopup(`
+        <b>${a.icao_code}</b><br>
+        ${cat}<br>
+        <div style="font-size:12px">${raw}</div>
+
+        <button onclick="saveFavorite('${a.icao_code}',${a.lat},${a.lng})">⭐</button>
+        <button onclick="drawRoute(${userLat},${userLon},${a.lat},${a.lng})">✈️ Route</button>
+      `);
+    });
+
+  }catch(err){
+    console.error(err);
+  }
+}
+
+// AUTO REFRESH (every 5 min)
+setInterval(()=>{
+  loadData(userLat,userLon);
+}, 300000);
+
+// LOCATION
+navigator.geolocation.getCurrentPosition(
+  pos=>{
+    userLat = pos.coords.latitude;
+    userLon = pos.coords.longitude;
+
+    map.setView([userLat,userLon],9);
+
+    loadData(userLat,userLon);
+    updateFavorites();
+  },
+  ()=>{
+    loadData(userLat,userLon);
+    updateFavorites();
+  }
+);
+
+</script>
 
 </body>
 </html>
