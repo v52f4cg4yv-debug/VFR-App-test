@@ -3,15 +3,21 @@
   <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VFR Map</title>
 
-  <!-- Leaflet CSS -->
+  <!-- ✅ Leaflet CSS (REQUIRED) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
+  <!-- ✅ Map styling (CRITICAL for visibility) -->
   <style>
-    html, body, #map {
+    html, body {
       height: 100%;
       margin: 0;
-      padding: 0;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
     }
 
     #status {
@@ -24,21 +30,24 @@
       color: white;
       padding: 8px;
       border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
     }
   </style>
 </head>
+
   <body>
 
-  <!-- Status text (top of screen) -->
+  <!-- Status text -->
   <div id="status">Loading airports...</div>
 
   <!-- Map container -->
   <div id="map"></div>
 
-  <!-- Leaflet JS (REQUIRED) -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- ✅ Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Your app code -->
+  <!-- ✅ Your app code -->
   <script>
 
     const AIRLABS_API_KEY = "YOUR_API_KEY_HERE";
@@ -52,7 +61,7 @@
     // Create map
     const map = L.map("map").setView([41.7, -86.9], 8);
 
-    // Base map
+    // Base map layer
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap"
     }).addTo(map);
@@ -76,7 +85,9 @@
         );
 
         const data = await res.json();
-        const airports = data.response.slice(0, 10);
+
+        // ✅ FIXED HERE
+        const airports = data.airports.slice(0, 10);
 
         const ids = airports.map(a => a.icao_code).join(",");
 
@@ -120,7 +131,7 @@
       }
     }
 
-    // Get user location
+    // Get location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(pos => {
         const lat = pos.coords.latitude;
@@ -136,4 +147,6 @@
   </script>
 
 </body>
+    
+
 </html>
