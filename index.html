@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VFR Map</title>
 
-  <!-- ✅ Leaflet CSS (REQUIRED) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- ✅ Map styling (CRITICAL for visibility) -->
   <style>
     html, body {
       height: 100%;
@@ -26,9 +25,9 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
-      background: black;
+      background: rgba(0,0,0,0.85);
       color: white;
-      padding: 8px;
+      padding: 8px 12px;
       border-radius: 8px;
       font-family: Arial, sans-serif;
       font-size: 14px;
@@ -36,14 +35,16 @@
   </style>
 </head>
 
- <body>
-
+<body>
   <div id="status">Loading airports...</div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
+    // IMPORTANT:
+    // If you ever pasted your AirLabs key publicly, regenerate it in AirLabs dashboard
+    // and replace it here with the new one.
     const AIRLABS_API_KEY = "661ae3f2-835e-469d-ad8b-c1d88bbef712";
 
     const statusEl = document.getElementById("status");
@@ -54,17 +55,28 @@
 
     const map = L.map("map").setView([41.7, -86.9], 8);
 
-const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+    // Street base layer
+    const street = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { attribution: "© OpenStreetMap" }
+    );
 
-const sectional = L.tileLayer("https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg");
+    // Your existing sectional layer
+    const sectional = L.tileLayer(
+      "https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg",
+      { attribution: "SkyVector" }
+    );
 
-street.addTo(map);
+    street.addTo(map);
 
-L.control.layers({
-  "Map": street,
-  "Sectional": sectional
-}).addTo(map);
-
+    L.control.layers(
+      {
+        "Map": street,
+        "Sectional": sectional
+      },
+      {},
+      { collapsed: false }
+    ).addTo(map);
 
     const layer = L.layerGroup().addTo(map);
 
@@ -76,17 +88,53 @@ L.control.layers({
       return "gray";
     }
 
+    async function getCategoryForAirport(icao) {
+      try {
+        // MetarCentral docs show /api/weather/{icao}
+        // and sample decoded JSON including flight_category.
+        const res = await fetch(`https://metarcentral.com/api/weather/${encodeURIComponent(icao)}`);
+
+        if (!res.ok) {
+          throw new Error(`MetarCentral HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        console.log(`MetarCentral response for ${icao}:`, data);
+
+        // Based on the docs snippet:
+        // { results: 1, data: [ { flight_category: "VFR", raw_text: "...", ... } ] }
+        const item = Array.isArray(data?.data) ? data.data[0] : null;
+
+        return {
+          category: item?.flight_category || "Unknown",
+          raw: item?.raw_text || "No METAR text available"
+        };
+      } catch (err) {
+        console.error(`Category fetch failed for ${icao}:`, err);
+        return {
+          category: "Unknown",
+          raw: "Category/METAR unavailable in browser"
+        };
+      }
+    }
+
     async function loadData(lat, lon) {
       try {
         setStatus("Finding airports...");
 
-        const res = await fetch(
-          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
-        );
+        const airlabsUrl =
+          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`;
+
+        const res = await fetch(airlabsUrl);
+
+        if (!res.ok) {
+          throw new Error(`AirLabs HTTP ${res.status}`);
+        }
 
         const data = await res.json();
         console.log("AirLabs response:", data);
 
+        // AirLabs Nearby docs show an airports array on success.
         const airports =
           Array.isArray(data.airports) ? data.airports.slice(0, 10) :
           Array.isArray(data.response?.airports) ? data.response.airports.slice(0, 10) :
@@ -98,73 +146,6 @@ L.control.layers({
           return;
         }
 
-        const ids = airports
-          .filter(a => a.icao_code)
-          .map(a => a.icao_code)
-          .join(",");
-
-        setStatus("Loading METAR...");
-
-        const metarRes = await fetch(
-          `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ids)}&format=json`
-        );
-
-        const metars = await metarRes.json();
         layer.clearLayers();
+        setStatus("Loading airport categories...");
 
-        airports.forEach(a => {
-          if (a.lat == null || a.lng == null) return;
-
-          const m = Array.isArray(metars)
-            ? metars.find(x => x.icaoId === a.icao_code)
-            : null;
-
-          const cat = m?.flight_category || "Unknown";
-          const raw = m?.rawOb || "No METAR text";
-
-          L.circleMarker([a.lat, a.lng], {
-            radius: 6,
-            fillColor: getColor(cat),
-            color: "white",
-            weight: 1,
-            fillOpacity: 0.9
-          })
-          .addTo(layer)
-          .bindPopup(`
-            <b>${a.name || a.icao_code}</b><br>
-            ${a.icao_code || ""}<br>
-            ${cat}<br>
-            ${raw}
-          `);
-        });
-
-        setStatus(`Loaded ${airports.length} airports ✅`);
-
-      } catch (e) {
-        console.error("loadData error:", e);
-        setStatus("Error loading data");
-      }
-    }
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const lat = pos.coords.latitude;
-          const lon = pos.coords.longitude;
-          map.setView([lat, lon], 9);
-          loadData(lat, lon);
-        },
-        () => {
-          setStatus("Using fallback location");
-          loadData(41.7, -86.9);
-        }
-      );
-    } else {
-      setStatus("Using fallback location");
-      loadData(41.7, -86.9);
-    }
-  </script>
-
-</body>
-    
-</html>
