@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta-width, initial-scale=1.0"><meta charset="UTF-8">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>VFR Map USA</title>
 
-<!-- Leaflet CSS -->
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-<!-- Marker Cluster CSS -->
+<!-- Marker Cluster -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
@@ -50,6 +51,8 @@ html, body, #map {
   color: white;
   padding: 10px;
   border-radius: 10px;
+  max-height: 200px;
+  overflow: auto;
   z-index: 1000;
 }
 </style>
@@ -64,7 +67,7 @@ html, body, #map {
   <button id="nearestBtn">🎯 Nearest</button>
   <button id="clearRouteBtn">✈️ Clear</button>
 
-  <div id="status">Loading...</div>
+  <div id="status">Loading…</div>
 
   <div>
     From: <span id="routeFrom">—</span><br>
@@ -81,11 +84,10 @@ html, body, #map {
 
 <div id="map"></div>
 
-<!-- ✅ Scripts (THIS IS THE FIX) -->
+<!-- ✅ SCRIPTS (THIS WAS YOUR MAIN ISSUE) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="app.js"></script>
 
 </body>
 </html>
-
