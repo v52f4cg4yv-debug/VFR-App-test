@@ -36,15 +36,17 @@
 <div id="map"></div>
 
 <script>
-const AIRLABS_API_KEY = "YOUR_AIRLABS_KEY";
-const WORKER_URL = "YOUR_WORKER_URL";
+
+// ✅ YOUR REAL KEYS
+const AIRLABS_API_KEY = "661ae3f2-835e-469d-ad8b-c1d88bbef712";
+const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
 
 // ---------------- MAP ----------------
 const map = L.map("map").setView([41.7, -86.9], 9);
 
 const sectional = L.tileLayer(
   "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}",
-  {maxZoom:12}
+  { maxZoom: 12 }
 ).addTo(map);
 
 const airportLayer = L.layerGroup().addTo(map);
@@ -59,21 +61,32 @@ function getColor(cat) {
 }
 
 // ---------------- DATA ----------------
-async function loadData(lat, lon){
-  try{
-    // 1️⃣ Get airports
+async function loadData(lat, lon) {
+  try {
+    console.log("Loading airports...");
+
+    // ✅ FIXED URL (no &amp;)
     const res = await fetch(
-      `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${661ae3f2-835e-469d-ad8b-c1d88bbef712}`
+      `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
     );
+
     const data = await res.json();
+    console.log("AirLabs data:", data);
 
-    const airports = data.response.airports.slice(0,10);
+    const airports = data.response.airports.slice(0, 10);
 
-    const ids = airports.map(a=>a.icao_code).join(",");
+    const ids = airports
+      .map(a => a.icao_code)
+      .filter(Boolean)
+      .join(",");
 
-    // 2️⃣ Get METAR via YOUR backend
-    const wxRes = await fetch(`${https://vfrmap.v52f4cg4yv.workers.dev/}?ids=${encodeURIComponent(ids)}`);
+    console.log("ICAOs:", ids);
+
+    // ✅ Worker call
+    const wxRes = await fetch(`${WORKER_URL}?ids=${encodeURIComponent(ids)}`);
     const wxData = await wxRes.json();
+
+    console.log("METAR data:", wxData);
 
     airportLayer.clearLayers();
 
@@ -83,12 +96,12 @@ async function loadData(lat, lon){
       const cat = wx?.flight_category || "Unknown";
       const raw = wx?.raw_text || "";
 
-      L.circleMarker([a.lat,a.lng],{
-        radius:7,
-        fillColor:getColor(cat),
-        color:"white",
-        weight:1,
-        fillOpacity:0.9
+      L.circleMarker([a.lat, a.lng], {
+        radius: 7,
+        fillColor: getColor(cat),
+        color: "white",
+        weight: 1,
+        fillOpacity: 0.9
       })
       .addTo(airportLayer)
       .bindPopup(`
@@ -98,22 +111,27 @@ async function loadData(lat, lon){
       `);
     });
 
-  }catch(e){
-    console.error(e);
+    console.log("Done ✅");
+
+  } catch (e) {
+    console.error("ERROR:", e);
   }
 }
 
 // ---------------- LOCATION ----------------
-navigator.geolocation.getCurrentPosition(pos=>{
-  const lat = pos.coords.latitude;
-  const lon = pos.coords.longitude;
+navigator.geolocation.getCurrentPosition(
+  pos => {
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
 
-  map.setView([lat,lon],9);
-  loadData(lat,lon);
-
-},()=>{
-  loadData(41.7,-86.9);
-});
+    map.setView([lat, lon], 9);
+    loadData(lat, lon);
+  },
+  () => {
+    console.warn("Using fallback location");
+    loadData(41.7, -86.9);
+  }
+);
 
 </script>
 
