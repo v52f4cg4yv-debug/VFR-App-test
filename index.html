@@ -54,9 +54,17 @@
 
     const map = L.map("map").setView([41.7, -86.9], 8);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap"
-    }).addTo(map);
+const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+
+const sectional = L.tileLayer("https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg");
+
+street.addTo(map);
+
+L.control.layers({
+  "Map": street,
+  "Sectional": sectional
+}).addTo(map);
+
 
     const layer = L.layerGroup().addTo(map);
 
