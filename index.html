@@ -5,7 +5,15 @@
     <title>Aviation Weather Map</title>
 
     <!-- Leaflet CSS -->
-    https://unpkg.com/leaflet/dist/leaflet.css
+    const sectionalLayer = L.tileLayer.offline(
+    'https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}',
+    {
+        attribution: 'FAA Sectional',
+        minZoom: 8,
+        maxZoom: 12,
+        crossOrigin: true
+    }
+);
 
     <style>
         body { margin: 0; font-family: Arial; }
