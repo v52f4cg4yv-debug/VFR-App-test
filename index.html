@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset Map USA</title><meta charset="UTF-8">
+<meta-width, initial-scale=1.0"><meta charset="UTF-8">
 
-<!-- Leaflet -->
+<title>VFR Map USA</title>
+
+<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-<!-- Marker Cluster -->
+<!-- Marker Cluster CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
@@ -14,7 +16,7 @@
 html, body, #map {
   height: 100%;
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
 }
 
 #topbar {
@@ -22,55 +24,34 @@ html, body, #map {
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
   background: black;
   color: white;
   padding: 10px;
   border-radius: 10px;
+  z-index: 1000;
 }
 
 #controls {
   position: absolute;
   top: 60px;
   left: 10px;
-  z-index: 1000;
   background: black;
   color: white;
   padding: 10px;
   border-radius: 10px;
-}
-
-#controls button {
-  display: block;
-  margin-bottom: 5px;
-  width: 160px;
+  z-index: 1000;
 }
 
 #favorites {
   position: absolute;
   bottom: 10px;
   left: 10px;
-  z-index: 1000;
   background: black;
   color: white;
   padding: 10px;
   border-radius: 10px;
-  max-height: 200px;
-  overflow: auto;
-  width: 200px;
+  z-index: 1000;
 }
-
-button {
-  padding: 6px;
-  border-radius: 5px;
-  border: none;
-}
-
-#status {
-  margin-top: 5px;
-  font-size: 12px;
-}
-
 </style>
 </head>
 
@@ -79,14 +60,13 @@ button {
 <div id="topbar">✈️ VFR Map USA</div>
 
 <div id="controls">
-  <button id="refreshBtn">🔄 Refresh WX</button>
-  <button id="nearestBtn">🎯 Nearest Airport</button>
-  <button id="clearRouteBtn">✈️ Clear Route</button>
+  <button id="refreshBtn">🔄 Refresh</button>
+  <button id="nearestBtn">🎯 Nearest</button>
+  <button id="clearRouteBtn">✈️ Clear</button>
 
-  <div id="status">Loading nationwide METAR…</div>
+  <div id="status">Loading...</div>
 
-  <div style="margin-top:10px;font-size:12px;">
-    <b>Planner</b><br>
+  <div>
     From: <span id="routeFrom">—</span><br>
     To: <span id="routeTo">—</span><br>
     Distance: <span id="routeDistance">—</span><br>
@@ -96,17 +76,16 @@ button {
 
 <div id="favorites">
   <b>⭐ Favorites</b>
-  <div id="favList">No favorites yet.</div>
+  <div id="favList">None</div>
 </div>
 
 <div id="map"></div>
 
-<!-- Scripts -->
+<!-- ✅ Scripts (THIS IS THE FIX) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="./app.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
