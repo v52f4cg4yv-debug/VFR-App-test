@@ -3,9 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VFR Map</title>
+  <title>VFR Map USA</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
   <style>
     html, body, #map {
       height: 100%;
@@ -38,7 +41,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-width: 170px;
+      min-width: 180px;
     }
 
     #controls button {
@@ -53,6 +56,12 @@
 
     #controls button:hover {
       background: #2b547c;
+    }
+
+    #status {
+      margin-top: 4px;
+      font-size: 12px;
+      opacity: 0.9;
     }
 
     #routeInfo {
@@ -74,18 +83,12 @@
       border-radius: 10px;
       max-height: 220px;
       overflow: auto;
-      width: 220px;
+      width: 240px;
       font-size: 13px;
-    }
-
-    #favorites b {
-      display: block;
-      margin-bottom: 8px;
     }
 
     .fav-row {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       gap: 6px;
       margin-bottom: 6px;
@@ -113,7 +116,7 @@
     }
 
     .leaflet-popup-content {
-      min-width: 230px;
+      min-width: 250px;
       line-height: 1.45;
     }
 
@@ -139,22 +142,31 @@
     }
 
     .popup-actions .danger {
-      background: #6a1e1e;
+      background: #7a2424;
     }
 
     .popup-actions .danger:hover {
-      background: #8b2a2a;
+      background: #9e2d2d;
+    }
+
+    .wx-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
     }
   </style>
 </head>
 <body>
 
-  <div id="topbar">✈️ VFR Map</div>
+  <div id="topbar">✈️ VFR Map USA</div>
 
   <div id="controls">
     <button id="refreshBtn">🔄 Refresh WX</button>
     <button id="nearestBtn">🎯 Nearest Airport</button>
     <button id="clearRouteBtn">✈️ Clear Route</button>
+    <div id="status">Loading nationwide METAR…</div>
 
     <div id="routeInfo">
       <div><b>Planner</b></div>
@@ -173,6 +185,7 @@
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
