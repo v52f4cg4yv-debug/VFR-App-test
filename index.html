@@ -1,11 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
+UTF-8" /><head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VFR Map</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
@@ -25,27 +23,25 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 1000;
-      background: rgba(0,0,0,0.85);
+      background: black;
       color: white;
-      padding: 8px 12px;
+      padding: 8px;
       border-radius: 8px;
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       font-size: 14px;
     }
   </style>
 </head>
 
 <body>
+
   <div id="status">Loading airports...</div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script>
-    // IMPORTANT:
-    // If you ever pasted your AirLabs key publicly, regenerate it in AirLabs dashboard
-    // and replace it here with the new one.
-    const AIRLABS_API_KEY = "661ae3f2-835e-469d-ad8b-c1d88bbef712";
+    const AIRLABS_API_KEY = "REPLACE_WITH_YOUR_NEW_KEY";
 
     const statusEl = document.getElementById("status");
 
@@ -55,28 +51,15 @@
 
     const map = L.map("map").setView([41.7, -86.9], 8);
 
-    // Street base layer
-    const street = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { attribution: "© OpenStreetMap" }
-    );
-
-    // Your existing sectional layer
-    const sectional = L.tileLayer(
-      "https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg",
-      { attribution: "SkyVector" }
-    );
+    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+    const sectional = L.tileLayer("https://tile.skyvector.com/tiles/301/{z}/{x}/{y}.jpg");
 
     street.addTo(map);
 
-    L.control.layers(
-      {
-        "Map": street,
-        "Sectional": sectional
-      },
-      {},
-      { collapsed: false }
-    ).addTo(map);
+    L.control.layers({
+      "Map": street,
+      "Sectional": sectional
+    }).addTo(map);
 
     const layer = L.layerGroup().addTo(map);
 
@@ -88,64 +71,75 @@
       return "gray";
     }
 
-    async function getCategoryForAirport(icao) {
-      try {
-        // MetarCentral docs show /api/weather/{icao}
-        // and sample decoded JSON including flight_category.
-        const res = await fetch(`https://metarcentral.com/api/weather/${encodeURIComponent(icao)}`);
-
-        if (!res.ok) {
-          throw new Error(`MetarCentral HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        console.log(`MetarCentral response for ${icao}:`, data);
-
-        // Based on the docs snippet:
-        // { results: 1, data: [ { flight_category: "VFR", raw_text: "...", ... } ] }
-        const item = Array.isArray(data?.data) ? data.data[0] : null;
-
-        return {
-          category: item?.flight_category || "Unknown",
-          raw: item?.raw_text || "No METAR text available"
-        };
-      } catch (err) {
-        console.error(`Category fetch failed for ${icao}:`, err);
-        return {
-          category: "Unknown",
-          raw: "Category/METAR unavailable in browser"
-        };
-      }
+    // TEMP classification (random until backend added)
+    function fakeCategory() {
+      const types = ["VFR", "MVFR", "IFR"];
+      return types[Math.floor(Math.random() * types.length)];
     }
 
     async function loadData(lat, lon) {
       try {
         setStatus("Finding airports...");
 
-        const airlabsUrl =
-          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`;
-
-        const res = await fetch(airlabsUrl);
-
-        if (!res.ok) {
-          throw new Error(`AirLabs HTTP ${res.status}`);
-        }
+        const res = await fetch(
+          `https://airlabs.co/api/v9/nearby?lat=${lat}&lng=${lon}&distance=80&api_key=${AIRLABS_API_KEY}`
+        );
 
         const data = await res.json();
         console.log("AirLabs response:", data);
 
-        // AirLabs Nearby docs show an airports array on success.
-        const airports =
-          Array.isArray(data.airports) ? data.airports.slice(0, 10) :
-          Array.isArray(data.response?.airports) ? data.response.airports.slice(0, 10) :
-          [];
+        const airports = data.response?.airports || data.airports || [];
 
         if (!airports.length) {
-          setStatus("No nearby airports returned");
-          console.error("Unexpected AirLabs payload:", data);
+          setStatus("No airports found");
           return;
         }
 
-        layer.clearLayers();
-        setStatus("Loading airport categories...");
+        const top = airports.slice(0, 10);
 
+        layer.clearLayers();
+
+        top.forEach(a => {
+          if (!a.icao_code) return;
+
+          const cat = fakeCategory(); // placeholder
+
+          L.circleMarker([a.lat, a.lng], {
+            radius: 7,
+            fillColor: getColor(cat),
+            color: "white",
+            weight: 1,
+            fillOpacity: 0.9
+          })
+          .addTo(layer)
+          .bindPopup(`
+            <b>${a.name}</b><br>
+            ${a.icao_code}<br>
+            ${cat}
+          `);
+        });
+
+        setStatus("Loaded ✅");
+
+      } catch (e) {
+        console.error(e);
+        setStatus("Error loading data");
+      }
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        map.setView([lat, lon], 9);
+        loadData(lat, lon);
+      });
+    } else {
+      loadData(41.7, -86.9);
+    }
+
+  </script>
+
+</body>
+</html>
