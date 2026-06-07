@@ -1,62 +1,44 @@
 const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
 
-let map;
+let map = L.map("map").setView([39.8, -98.6], 5);
 let markers = [];
-let userLat = 39.8;
-let userLon = -98.6;
 
-function setStatus(text) {
-  const el = document.getElementById("status");
-  if (el) el.textContent = text;
+function setStatus(t) {
+  document.getElementById("status").innerText = t;
 }
 
+// ✅ Sectional
+L.tileLayer(
+  "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/ArcGIS/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 12 }
+).addTo(map);
+
+// ✅ Color logic
 function color(cat) {
-  return cat === "VFR" ? "green" :
-         cat === "MVFR" ? "blue" :
-         cat === "IFR" ? "red" :
-         cat === "LIFR" ? "purple" : "gray";
+  if (cat === "VFR") return "green";
+  if (cat === "MVFR") return "blue";
+  if (cat === "IFR") return "red";
+  if (cat === "LIFR") return "purple";
+  return "gray";
 }
 
 function clearMarkers() {
-  for (let i = 0; i < markers.length; i++) {
-    map.removeLayer(markers[i]);
-  }
+  markers.forEach(m => map.removeLayer(m));
   markers = [];
 }
 
-function currentBBox() {
-  const b = map.getBounds();
-  return {
-    west: b.getWest(),
-    south: b.getSouth(),
-    east: b.getEast(),
-    north: b.getNorth()
-  };
-}
+async function load() {
+  setStatus("Loading...");
 
-function inBounds(lat, lon, bbox) {
-  return lat >= bbox.south && lat <= bbox.north && lon >= bbox.west && lon <= bbox.east;
-}
-
-async function loadVisibleMetar() {
   try {
-    setStatus("Loading visible METAR…");
-
-    const bbox = currentBBox();
-    const res = await fetch(WORKER_URL + "/usa");
+    const res = await fetch(`${WORKER_URL}/usa`);
     const data = await res.json();
-    const all = data.data || [];
 
-    const visible = all.filter(s => {
-      if (s.lat == null || s.lon == null) return false;
-      return inBounds(s.lat, s.lon, bbox);
-    });
+    const list = data.data || [];
 
     clearMarkers();
 
-    for (let i = 0; i < visible.length; i++) {
-      const s = visible[i];
-
+    list.forEach(s => {
       const m = L.circleMarker([s.lat, s.lon], {
         radius: 6,
         fillColor: color(s.flight_category),
@@ -65,55 +47,23 @@ async function loadVisibleMetar() {
         fillOpacity: 0.9
       });
 
-      m.bindPopup(
-        "<b>" + escapeHtml(s.icao || "UNK") + "</b><br>" +
-        escapeHtml(s.flight_category || "Unknown") + "<br>" +
-        "<small>" + escapeHtml(s.raw_text || "") + "</small>"
-      );
+      m.bindPopup(`
+        <b>${s.icao}</b><br>
+        ${s.flight_category}<br>
+        <small>${s.raw_text}</small>
+      `);
 
       m.addTo(map);
       markers.push(m);
-    }
+    });
 
-    setStatus("Loaded " + visible.length + " visible airports");
+    setStatus("Loaded " + list.length + " airports");
+
   } catch (e) {
     console.error(e);
-    setStatus("Error loading data");
+    setStatus("ERROR");
   }
 }
 
-function init() {
-  map = L.map("map").setView([userLat, userLon], 5);
-
-  // Sectional background
-  L.tileLayer(
-    "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/arcgis/rest/services/VFR_Sectional/MapServer/WMTS/tile/1.0.0/VFR_Sectional/default/default028mm/{z}/{y}/{x}",
-    { maxZoom: 12 }
-  ).addTo(map);
-
-  L.marker([userLat, userLon]).addTo(map).bindPopup("You are here");
-
-  map.on("moveend", loadVisibleMetar);
-
-  loadVisibleMetar();
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-navigator.geolocation.getCurrentPosition(
-  function(pos) {
-    userLat = pos.coords.latitude;
-    userLon = pos.coords.longitude;
-    init();
-  },
-  function() {
-    init();
-  }
-);
+load();
+``
