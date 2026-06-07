@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>VFR Map USA</title>
 
-<!-- Leaflet CSS -->
+<!-- ✅ Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-<!-- Marker Cluster CSS -->
+<!-- ✅ Marker Cluster CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
@@ -20,19 +19,14 @@ html, body, #map {
   font-family: Arial;
 }
 
-#map {
-  width: 100%;
-  height: 100%;
-}
-
 #status {
   position: absolute;
   top: 10px;
   left: 10px;
+  z-index: 1000;
   background: black;
   color: white;
-  padding: 6px;
-  z-index: 1000;
+  padding: 6px 10px;
   border-radius: 6px;
 }
 </style>
@@ -40,12 +34,16 @@ html, body, #map {
 
 <body>
 
-<div id="status">Loading…</div>
+<div id="status">Loading...</div>
 <div id="map"></div>
 
-<!-- ✅ JS FILES (REAL FIX) -->
+<!-- ✅ Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- ✅ Marker Cluster JS (FIXED) -->
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<!-- ✅ Your app -->
 <script src="app.js"></script>
 
 </body>
