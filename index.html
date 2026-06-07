@@ -1,38 +1,32 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VFR Map USA</title>
+<meta charset="UTF-8">
+<title>VFR Map</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-
-    #status {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: rgba(0,0,0,0.88);
-      color: white;
-      padding: 8px 10px;
-      border-radius: 8px;
-      font-size: 13px;
-    }
-  </style>
+<style>
+html, body, #map { height:100%; margin:0; }
+#status {
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:black;
+  color:white;
+  padding:6px;
+  z-index:1000;
+}
+</style>
 </head>
+
 <body>
 
-  <div id="status">Loading…</div>
-  <div id="map"></div>
+<div id="status">Loading...</div>
+<div id="map"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+
 </body>
 </html>
