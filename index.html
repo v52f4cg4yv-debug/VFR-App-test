@@ -1,187 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VFR Map USA</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<title>VFR Map USA</title>
 
-  <!-- Marker Cluster -->
-  https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css
-  https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-  <style>
-    html, body, #map {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
+<!-- Marker Cluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
 
-    #topbar {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: rgba(0,0,0,0.88);
-      color: white;
-      padding: 10px 14px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
+<style>
+html, body, #map {
+  height: 100%;
+  margin: 0;
+  font-family: Arial;
+}
 
-    #controls {
-      position: absolute;
-      top: 60px;
-      left: 10px;
-      z-index: 1000;
-      background: rgba(0,0,0,0.88);
-      color: white;
-      padding: 10px;
-      border-radius: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      min-width: 180px;
-    }
+#map {
+  width: 100%;
+  height: 100%;
+}
 
-    #controls button {
-      cursor: pointer;
-      padding: 8px 10px;
-      border: none;
-      border-radius: 8px;
-      background: #1f3b57;
-      color: white;
-      font-size: 13px;
-    }
-
-    #controls button:hover {
-      background: #2b547c;
-    }
-
-    #status {
-      margin-top: 4px;
-      font-size: 12px;
-      opacity: 0.95;
-    }
-
-    #routeInfo {
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid rgba(255,255,255,0.15);
-      font-size: 12px;
-      line-height: 1.4;
-    }
-
-    #favorites {
-      position: absolute;
-      bottom: 10px;
-      left: 10px;
-      z-index: 1000;
-      background: rgba(0,0,0,0.88);
-      color: white;
-      padding: 10px;
-      border-radius: 10px;
-      max-height: 220px;
-      overflow: auto;
-      width: 240px;
-      font-size: 13px;
-    }
-
-    .fav-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 6px;
-    }
-
-    .fav-row span {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .fav-row button {
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
-      padding: 4px 7px;
-      font-size: 12px;
-      background: #1f3b57;
-      color: white;
-    }
-
-    .fav-row button:hover {
-      background: #2b547c;
-    }
-
-    .leaflet-popup-content {
-      min-width: 260px;
-      line-height: 1.45;
-    }
-
-    .popup-actions {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .popup-actions button {
-      cursor: pointer;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 12px;
-      background: #1f3b57;
-      color: white;
-    }
-
-    .popup-actions button:hover {
-      background: #2b547c;
-    }
-
-    .wx-dot {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 2px solid white;
-      box-shadow: 0 0 4px rgba(0,0,0,0.5);
-    }
-  </style>
+#status {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: black;
+  color: white;
+  padding: 6px;
+  z-index: 1000;
+  border-radius: 6px;
+}
+</style>
 </head>
+
 <body>
 
-  <div id="topbar">✈️ VFR Map USA</div>
+<div id="status">Loading…</div>
+<div id="map"></div>
 
-  <div id="controls">
-    <button id="refreshBtn">🔄 Refresh WX</button>
-    <button id="nearestBtn">🎯 Nearest Airport</button>
-    <button id="clearRouteBtn">✈️ Clear Route</button>
-    <div id="status">Loading visible METAR…</div>
+<!-- ✅ JS FILES (REAL FIX) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="app.js"></script>
 
-    <div id="routeInfo">
-      <div><b>Planner</b></div>
-      <div>From: <span id="routeFrom">—</span></div>
-      <div>To: <span id="routeTo">—</span></div>
-      <div>Distance: <span id="routeDistance">—</span></div>
-      <div>Heading: <span id="routeHeading">—</span></div>
-    </div>
-  </div>
-
-  <div id="favorites">
-    <b>⭐ Favorites</b>
-    <div id="favList">No favorites yet.</div>
-  </div>
-
-  <div id="map"></div>
-
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.jsscript>
-  <script src="app.js"></script>
 </body>
 </html>
