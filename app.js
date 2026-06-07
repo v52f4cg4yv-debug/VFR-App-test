@@ -6,7 +6,7 @@ let userLat = 39.8;
 let userLon = -98.6;
 
 function setStatus(text) {
-  var el = document.getElementById("status");
+  const el = document.getElementById("status");
   if (el) el.textContent = text;
 }
 
@@ -18,39 +18,46 @@ function color(cat) {
 }
 
 function clearMarkers() {
-  for (var i = 0; i < markers.length; i++) {
+  for (let i = 0; i < markers.length; i++) {
     map.removeLayer(markers[i]);
   }
   markers = [];
 }
 
 function currentBBox() {
-  var b = map.getBounds();
-  return [
-    b.getWest(),
-    b.getSouth(),
-    b.getEast(),
-    b.getNorth()
-  ].join(",");
+  const b = map.getBounds();
+  return {
+    west: b.getWest(),
+    south: b.getSouth(),
+    east: b.getEast(),
+    north: b.getNorth()
+  };
+}
+
+function inBounds(lat, lon, bbox) {
+  return lat >= bbox.south && lat <= bbox.north && lon >= bbox.west && lon <= bbox.east;
 }
 
 async function loadVisibleMetar() {
   try {
     setStatus("Loading visible METAR…");
 
-    var bbox = currentBBox();
-    var url = WORKER_URL + "/bbox?bbox=" + encodeURIComponent(bbox);
+    const bbox = currentBBox();
+    const res = await fetch(WORKER_URL + "/usa");
+    const data = await res.json();
+    const all = data.data || [];
 
-    var res = await fetch(url);
-    var data = await res.json();
-    var list = data.data || [];
+    const visible = all.filter(s => {
+      if (s.lat == null || s.lon == null) return false;
+      return inBounds(s.lat, s.lon, bbox);
+    });
 
     clearMarkers();
 
-    for (var i = 0; i < list.length; i++) {
-      var s = list[i];
+    for (let i = 0; i < visible.length; i++) {
+      const s = visible[i];
 
-      var m = L.circleMarker([s.lat, s.lon], {
+      const m = L.circleMarker([s.lat, s.lon], {
         radius: 6,
         fillColor: color(s.flight_category),
         color: "white",
@@ -59,16 +66,16 @@ async function loadVisibleMetar() {
       });
 
       m.bindPopup(
-        "<b>" + s.icao + "</b><br>" +
-        s.flight_category + "<br>" +
-        "<small>" + (s.raw_text || "") + "</small>"
+        "<b>" + escapeHtml(s.icao || "UNK") + "</b><br>" +
+        escapeHtml(s.flight_category || "Unknown") + "<br>" +
+        "<small>" + escapeHtml(s.raw_text || "") + "</small>"
       );
 
       m.addTo(map);
       markers.push(m);
     }
 
-    setStatus("Loaded " + list.length + " airports");
+    setStatus("Loaded " + visible.length + " visible airports");
   } catch (e) {
     console.error(e);
     setStatus("Error loading data");
@@ -89,6 +96,15 @@ function init() {
   map.on("moveend", loadVisibleMetar);
 
   loadVisibleMetar();
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 navigator.geolocation.getCurrentPosition(
