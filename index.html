@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VFR Map USA</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- Marker Cluster -->
+  https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css
+  https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css
 
   <style>
     html, body, #map {
@@ -161,10 +168,20 @@
       <div>From: <span id="routeFrom">—</span></div>
       <div>To: <span id="routeTo">—</span></div>
       <div>Distance: <span id="routeDistance">—</span></div>
+      <div>Heading: <span id="routeHeading">—</span></div>
+    </div>
+  </div>
 
-  <title>VFR Map USA</title>
+  <div id="favorites">
+    <b>⭐ Favorites</b>
+    <div id="favList">No favorites yet.</div>
+  </div>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <div id="map"></div>
 
-  <!-- Marker Cluster -->
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.jsscript>
+  <script src="app.js"></script>
+</body>
+</html>
