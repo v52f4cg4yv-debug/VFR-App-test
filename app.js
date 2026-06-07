@@ -1,22 +1,17 @@
 const WORKER_URL = "https://vfrmap.v52f4cg4yv.workers.dev";
 
-let map;
-let cluster;
+let map = L.map("map").setView([39.8, -98.6], 5);
+let markers = [];
 
-function setStatus(txt) {
-  document.getElementById("status").innerText = txt;
+function setStatus(t) {
+  document.getElementById("status").innerText = t;
 }
 
-// ✅ Init map
-map = L.map("map").setView([39.8, -98.6], 5);
-
+// ✅ Sectional map
 L.tileLayer(
   "https://tiles.arcgis.com/tiles/ssFJjBXIUyZDrSYZ/ArcGIS/rest/services/VFR_Sectional/MapServer/tile/{z}/{y}/{x}",
   { maxZoom: 12 }
 ).addTo(map);
-
-cluster = L.markerClusterGroup();
-map.addLayer(cluster);
 
 // ✅ Color logic
 function color(cat) {
@@ -27,9 +22,13 @@ function color(cat) {
   return "gray";
 }
 
-// ✅ Load METAR for visible map
+function clearMarkers() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+}
+
 async function load() {
-  setStatus("Loading METAR...");
+  setStatus("Loading...");
 
   const b = map.getBounds();
 
@@ -48,11 +47,11 @@ async function load() {
     const data = await res.json();
     const list = data.data || [];
 
-    cluster.clearLayers();
+    clearMarkers();
 
     list.forEach(s => {
       const m = L.circleMarker([s.lat, s.lon], {
-        radius: 5,
+        radius: 6,
         fillColor: color(s.flight_category),
         color: "white",
         weight: 1,
@@ -65,19 +64,20 @@ async function load() {
         <small>${s.raw_text}</small>
       `);
 
-      cluster.addLayer(m);
+      m.addTo(map);
+      markers.push(m);
     });
 
     setStatus("Loaded " + list.length + " airports");
 
   } catch (e) {
     console.error(e);
-    setStatus("ERROR loading data");
+    setStatus("ERROR");
   }
 }
 
-// ✅ refresh when moving map
+// ✅ Reload when map moves
 map.on("moveend", load);
 
-// ✅ start
+// ✅ Start
 load();
